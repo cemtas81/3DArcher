@@ -192,7 +192,7 @@ public class TrajectoryPredictor : MonoBehaviour
                 float groundTime = CalculateGroundIntersectionTime(startPosition, velocity);
                 if (groundTime > 0)
                 {
-                    Vector3 groundPoint = startPosition + velocity * groundTime + 0.5f * Physics.gravity * groundTime * groundTime;
+                    Vector3 groundPoint = startPosition + velocity * groundTime + 0.5f * groundTime * groundTime * Physics.gravity;
                     groundPoint.y = 0;
                     return groundPoint;
                 }

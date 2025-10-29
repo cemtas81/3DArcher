@@ -44732,8 +44732,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   playerPrefabs:
-  - {fileID: 1542066747387058961, guid: ab751a8d456eb4b4fbdd80869558c8a3, type: 3}
   - {fileID: 1542066747387058961, guid: 38d62ca921384194b85b5f58e514b833, type: 3}
+  - {fileID: 1542066747387058961, guid: ab751a8d456eb4b4fbdd80869558c8a3, type: 3}
   - {fileID: 1542066747387058961, guid: 265c489972abd6743aee496b2bb86d5c, type: 3}
   - {fileID: 1542066747387058961, guid: 8d9e3d4b2a311f847ad4f9a64264e857, type: 3}
   spawnPoints:

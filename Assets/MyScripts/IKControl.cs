@@ -16,12 +16,12 @@ public class IKControl : MonoBehaviour
         if (iKactive)
         {
             anim.SetIKPositionWeight(goal, 1);
-            anim.SetIKPositionWeight(goal2, -1f);
+            anim.SetIKPositionWeight(goal2, -3f);
             anim.SetLookAtWeight(1);
             anim.SetIKPosition(goal, target.transform.position);
             anim.SetIKPosition(goal2, targetToLook2.transform.position);
             anim.SetLookAtPosition(targetToLook.transform.position);
-            anim.SetIKRotationWeight(goal2, -1);
+            anim.SetIKRotationWeight(goal2, -3);
             anim.SetIKRotation(goal2, targetToLook2.transform.rotation);
         }
         // Uncommented code to reset IK weights when not active.

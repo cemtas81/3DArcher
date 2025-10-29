@@ -18,6 +18,9 @@ EditorBuildSettings:
     path: Assets/ArcherScenes/ArcherPlayground.unity
     guid: d20c7326890ffb14ead8af92114f3880
   - enabled: 0
+    path: Assets/Kevin Iglesias/Archer Animations/Archer Animations - Demo Scene.unity
+    guid: b73cf5c816ec67047ada7c3c641e079c
+  - enabled: 0
     path: Assets/Scenes/Test.unity
     guid: 70f1d11e32ed99942b26ddfc03234774
   - enabled: 0
