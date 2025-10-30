@@ -1029,6 +1029,10 @@ MonoBehaviour:
   minGravityMultiplier: 0.01
   completelyFlatThreshold: 0.95
   minDragDistance: 12
+  maxDeviationRadius: 0.75
+  playerExperience: 0
+  deviationFrequency: 1.5
+  deviationSmoothing: 10
   isAiming: 0
   mainCamera: {fileID: 0}
   trajectoryPredictor: {fileID: 4843536160057684094}

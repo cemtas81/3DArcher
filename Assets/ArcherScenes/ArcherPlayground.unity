@@ -44813,9 +44813,9 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   playerPrefabs:
   - {fileID: 1542066747387058961, guid: ab751a8d456eb4b4fbdd80869558c8a3, type: 3}
-  - {fileID: 1542066747387058961, guid: ab751a8d456eb4b4fbdd80869558c8a3, type: 3}
-  - {fileID: 1542066747387058961, guid: ab751a8d456eb4b4fbdd80869558c8a3, type: 3}
-  - {fileID: 1542066747387058961, guid: ab751a8d456eb4b4fbdd80869558c8a3, type: 3}
+  - {fileID: 1542066747387058961, guid: 38d62ca921384194b85b5f58e514b833, type: 3}
+  - {fileID: 1542066747387058961, guid: 265c489972abd6743aee496b2bb86d5c, type: 3}
+  - {fileID: 1542066747387058961, guid: 8d9e3d4b2a311f847ad4f9a64264e857, type: 3}
   spawnPoints:
   - {fileID: 538205014}
   - {fileID: 1629763918}
@@ -71550,7 +71550,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_PresetAsset: {fileID: 0}
   m_PresetReference:
-    rid: 3019084529967562860
+    rid: 1588335394860826742
   m_Scenario:
     rid: -2
   m_IsScenarioSettingsFolded: 1
@@ -71560,7 +71560,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 3019084529967562860
+    - rid: 1588335394860826742
       type: {class: NetworkSimulatorPreset, ns: Unity.Multiplayer.Tools.NetworkSimulator.Runtime, asm: Unity.Multiplayer.Tools.NetworkSimulator.Runtime}
       data:
         <Name>k__BackingField: None

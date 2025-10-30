@@ -38,6 +38,14 @@ public class ArrowLauncher : NetworkBehaviour
     [Header("Input Thresholds")]
     [SerializeField] private float minDragDistance = 12f; // Atýþ baþlamasý için minimum sürükleme (px)
 
+    [Header("Accuracy / Hand Tremor (meters)")]
+    [SerializeField] private float maxDeviationRadius = 0.5f; // Maks sapma yarýçapý metre cinsinden
+    [SerializeField, Range(0f, 1f)] private float playerExperience = 0f; // 0 = acemi (maks sapma), 1 = usta (0 sapma)
+
+    [Header("Deviation Wave Settings")]
+    [SerializeField, Tooltip("Perlin noise ile dalga hýzýný kontrol eder (Hz)")] private float deviationFrequency = 1.4f;
+    [SerializeField, Tooltip("Ofsetin kareler arasýnda ne kadar hýzlý yumuþatýlacaðýný kontrol eder; 0 = kapalý")] private float deviationSmoothing = 8f;
+
     // Input / durum
     private Vector3 startMousePosition;
     public bool isAiming;
@@ -53,7 +61,15 @@ public class ArrowLauncher : NetworkBehaviour
     private float lastFlattenFactor;
     private float lastEffectiveGravity;
     private bool lastIsStraightShot;
-    
+
+    // Mevcut sapma ofseti (görsel + spawn için kullanýlýr). Y ekseni 0 tutulur.
+    private Vector3 currentDeviationOffset = Vector3.zero;
+
+    // Perlin noise tohumlarý ve hedefleme baþlangýç zamaný
+    private float deviationNoiseSeedX;
+    private float deviationNoiseSeedY;
+    private float aimStartTime;
+
 
     private void Start()
     {
@@ -127,6 +143,12 @@ public class ArrowLauncher : NetworkBehaviour
         isAiming = true;
         shotStateValid = false;
         dragPassedThreshold = false; // Eþik henüz aþýlmadý
+        currentDeviationOffset = Vector3.zero;
+
+        // Her niþan alma baþlangýcýnda farklý ama yumuþak bir Perlin hareketi baþlat
+        deviationNoiseSeedX = Random.Range(0f, 1000f);
+        deviationNoiseSeedY = Random.Range(1000f, 2000f);
+        aimStartTime = Time.time;
     }
 
     private void UpdateAiming()
@@ -175,13 +197,13 @@ public class ArrowLauncher : NetworkBehaviour
 
         // Gerekli verileri sunucuya gönder
         Vector3 spawnRot = lastAdjustedVelocity.normalized;
-        Vector3 spawnPos = arrowSpawnPoint.position;
+        Vector3 spawnPos = arrowSpawnPoint.position + currentDeviationOffset; // sapmalý spawn pozisyonu
 
         // Ýstemcide hesaplanan deterministik parametreleri sunucuya gönder
         SpawnArrowServerRpc(
             spawnPos,
             spawnRot,
-            lastAdjustedVelocity,            // initialVelocity
+            lastAdjustedVelocity,            // initialVelocity (y deðiþimi korunur)
             trajectoryPoints,                // pointsCount
             trajectoryTimeStep,              // timeStep
             lastEffectiveGravity,            // gravityMul
@@ -229,6 +251,7 @@ public class ArrowLauncher : NetworkBehaviour
         isAiming = false;
         shotStateValid = false;
         dragPassedThreshold = false;
+        currentDeviationOffset = Vector3.zero;
         if (trajectoryLine != null) trajectoryLine.enabled = false;
         if (crosshairInstance != null) crosshairInstance.SetActive(false);
     }
@@ -251,15 +274,29 @@ public class ArrowLauncher : NetworkBehaviour
             lastIsStraightShot = true;
         }
 
+        // Her frame sapma offsetini hesapla (Y ekseni 0 kalýr). Tecrübe arttýkça sapma azalýr.
+        currentDeviationOffset = CalculateDeviationOffset(lastAdjustedVelocity);
+
         shotStateValid = true;
     }
 
     private void PredictTrajectoryIfAvailable()
     {
         if (trajectoryPredictor == null || trajectoryLine == null) return;
+
+        // Sapmayý velocity'ye uygula, pozisyon sabit kalsýn
+        Vector3 deviatedVelocity = lastAdjustedVelocity;
+        if (currentDeviationOffset.sqrMagnitude > 0.0001f)
+        {
+            // Sadece XZ düzleminde velocity'ye ekle
+            Vector3 deviationDir = currentDeviationOffset;
+            deviationDir.y = 0f;
+            deviatedVelocity += deviationDir;
+        }
+
         trajectoryPredictor.PredictTrajectory(
-            arrowSpawnPoint.position,
-            lastAdjustedVelocity,
+            arrowSpawnPoint.position, // sabit çýkýþ noktasý
+            deviatedVelocity,
             trajectoryLine,
             trajectoryPoints,
             trajectoryTimeStep,
@@ -346,7 +383,7 @@ public class ArrowLauncher : NetworkBehaviour
             if (dist > 0.01f)
             {
                 dir /= dist;
-                if (Physics.Raycast(prev, dir, out RaycastHit hit, dist + 0.1f,layerMask))
+                if (Physics.Raycast(prev, dir, out RaycastHit hit, dist + 0.1f, layerMask))
                 {
                     surfaceNormal = hit.normal;
                     landing = hit.point;
@@ -355,8 +392,51 @@ public class ArrowLauncher : NetworkBehaviour
         }
 
         crosshairInstance.transform.SetPositionAndRotation(landing + surfaceNormal * 0.01f, Quaternion.FromToRotation(Vector3.forward, surfaceNormal));
-        Vector3 peak=GetTrajectoryPeakPoint();
-        aim.position=peak;
+        Vector3 peak = GetTrajectoryPeakPoint();
+        aim.position = peak;
+    }
+
+    // Yeni: Perlin-based dalga (wave) sapma; Y=0 korunur. launchVelocity yönüne göre XZ düzleminde dalga üretir.
+    private Vector3 CalculateDeviationOffset(Vector3 launchVelocity)
+    {
+        // Tecrübeye göre yarýçap küçülür (1 => 0 sapma)
+        float radius = Mathf.Lerp(maxDeviationRadius, 0f, Mathf.Clamp01(playerExperience));
+        if (radius <= 0f)
+            return Vector3.zero;
+
+        // Zamaný aim baþlangýcýndan alýyoruz ki niþan alma baþladýðýnda ani sýçrama olmasýn
+        float t = (Time.time - aimStartTime) * deviationFrequency;
+
+        // Ýki farklý Perlin kanalý: biri lateral (right), biri ileri (forward) için
+        float sampleX = (Mathf.PerlinNoise(deviationNoiseSeedX, t) - 0.5f) * 2f;      // [-1,1]
+        float sampleY = (Mathf.PerlinNoise(deviationNoiseSeedY, t * 1.17f) - 0.5f) * 2f; // farklý ölçek => daha organik hareket
+
+        Vector2 sample = new Vector2(sampleX, sampleY) * radius; // metre cinsinden hedef ofset
+
+        // Launch yönünün XZ projeksiyonunu al; eðer çok küçükse world forward kullan
+        Vector3 forwardXZ = new Vector3(launchVelocity.x, 0f, launchVelocity.z);
+        if (forwardXZ.sqrMagnitude < 1e-6f)
+            forwardXZ = new Vector3(transform.forward.x, 0f, transform.forward.z);
+        forwardXZ.y = 0f;
+        forwardXZ.Normalize();
+
+        Vector3 rightXZ = Vector3.Cross(Vector3.up, forwardXZ).normalized;
+
+        Vector3 targetOffset = rightXZ * sample.x + forwardXZ * sample.y;
+        targetOffset.y = 0f;
+
+        // Ýsteðe baðlý yumuþatma — daha doðal, dalgalý hareket için
+        if (deviationSmoothing > 0f)
+        {
+            // basit LERP ile smoothing (daha yüksek deðer = daha hýzlý takip)
+            currentDeviationOffset = Vector3.Lerp(currentDeviationOffset, targetOffset, Mathf.Clamp01(Time.deltaTime * deviationSmoothing));
+        }
+        else
+        {
+            currentDeviationOffset = targetOffset;
+        }
+
+        return currentDeviationOffset;
     }
 
     public Vector3 GetLaunchDirection()
